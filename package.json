@@ -8,6 +8,7 @@
     "start": "next start -p 3001"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "cheerio": "^1.0.0-rc.12",
     "next": "^13.4.8",
     "node-fetch": "^2.6.7",
