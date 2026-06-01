@@ -48,7 +48,7 @@ async function checkIssueHasLinkedPR(owner, repo, issueNumber) {
 }
 
 async function fetchOpenIssues(owner, repo) {
-  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues?state=open&per_page=30`
+  const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues?state=open&assignee=none&per_page=30`
   const r = await fetch(url, { headers: getGitHubHeaders() })
   if (!r.ok) return []
   const items = await r.json()
