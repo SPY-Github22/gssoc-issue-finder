@@ -290,33 +290,8 @@ export default function Home() {
               >
                 {loading ? 'Searching...' : 'Search Issues'}
               </button>
-              {!selectedRepo && (searchInput || topicInput) && filteredRepos.length > 0 && (
-                <div style={styles.repoResults}>
-                  <h2 style={styles.resultsTitle}>Top matching repositories</h2>
-                  <div style={styles.issuesList}>
-                    {filteredRepos.slice(0, 5).map(repo => (
-                      <div key={repo.owner_repo} style={styles.issueCard}>
-                        <h3 style={styles.issueTitle}>{repo.project_name}</h3>
-                        <div style={styles.issueMeta}>
-                          <span>{repo.owner_repo}</span>
-                          <span>{repo.difficulty}</span>
-                        </div>
-                        <div style={styles.labelsContainer}>
-                          {repo.tech_stack.slice(0, 4).map((tag, i) => (
-                            <span key={i} style={styles.repoTag}>{tag}</span>
-                          ))}
-                          {repo.topics.slice(0, 4).map((tag, i) => (
-                            <span key={`topic-${i}`} style={styles.repoTag}>{tag}</span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
               <div style={{...styles.repoResults, borderTop: '1px solid #1f2937', paddingTop: '24px', marginTop: '32px'}}>
-                <h2 style={{...styles.resultsTitle, color: '#38bdf8'}}>Live Workable Issues (Leaderboard)</h2>
+                <h2 style={{...styles.resultsTitle, color: '#38bdf8'}}>Top Verified Projects (Leaderboard)</h2>
                 <p style={{color: '#94a3b8', fontSize: '14px', marginBottom: '16px'}}>
                   Enter a tech stack. We will batch scan projects on GitHub for strict workable issues (0 human comments, no PRs) and rank the top 5!
                 </p>
