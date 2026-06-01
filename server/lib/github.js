@@ -47,6 +47,24 @@ async function checkIssueHasLinkedPR(owner, repo, issueNumber) {
   })
 }
 
+const ANNOUNCEMENT_KEYWORDS = [
+  '📢',
+  'announcement',
+  'reminder:',
+  'attention:',
+  'important:',
+  'please read'
+]
+
+function isAnnouncementIssue(title) {
+  if (!title) return false
+  const lower = title.toLowerCase()
+  return ANNOUNCEMENT_KEYWORDS.some(kw => lower.includes(kw)) ||
+         lower.startsWith('important ') ||
+         lower.startsWith('reminder ') ||
+         lower.startsWith('notice ')
+}
+
 async function fetchOpenIssues(owner, repo) {
   const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues?state=open&assignee=none&per_page=30`
   const r = await fetch(url, { headers: getGitHubHeaders() })
@@ -56,6 +74,7 @@ async function fetchOpenIssues(owner, repo) {
 
   return items
     .filter(issue => !issue.pull_request)
+    .filter(issue => !isAnnouncementIssue(issue.title))
     .map(issue => ({
       number: issue.number,
       title: issue.title,
