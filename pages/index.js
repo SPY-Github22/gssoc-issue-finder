@@ -5,7 +5,7 @@ const DIFFICULTIES = ['All Levels', 'Beginner Friendly', 'Intermediate', 'Advanc
 
 export default function Home() {
   const [repos, setRepos] = useState([])
-  const [mode, setMode] = useState('random')
+  const [mode, setMode] = useState('search')
   const [ownerOnly, setOwnerOnly] = useState(true)
   const [difficulty, setDifficulty] = useState('All Levels')
   const [selectedRepo, setSelectedRepo] = useState('')
@@ -119,16 +119,16 @@ export default function Home() {
         <div style={styles.card}>
           <div style={styles.modeToggle}>
             <button
-              onClick={() => setMode('random')}
-              style={{...styles.modeBtn, ...(mode === 'random' ? styles.modeBtnActive : {})}}
-            >
-              Random Issue
-            </button>
-            <button
               onClick={() => setMode('search')}
               style={{...styles.modeBtn, ...(mode === 'search' ? styles.modeBtnActive : {})}}
             >
               Search Repo
+            </button>
+            <button
+              onClick={() => setMode('random')}
+              style={{...styles.modeBtn, ...(mode === 'random' ? styles.modeBtnActive : {})}}
+            >
+              Random Issue
             </button>
           </div>
 
