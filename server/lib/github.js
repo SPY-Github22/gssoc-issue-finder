@@ -96,9 +96,12 @@ async function scanProjectsForIssues(projects, ownerOnly, targetCount = 5) {
   const results = []
   const PROJECT_BATCH_SIZE = 5
   const ISSUE_BATCH_SIZE = 10
+  const START_TIME = Date.now()
+  const MAX_TIME = 7500 // 7.5 seconds safety limit before Vercel 10s cutoff
 
   for (let i = 0; i < projects.length; i += PROJECT_BATCH_SIZE) {
     if (results.length >= targetCount) break
+    if (Date.now() - START_TIME > MAX_TIME) break
     
     const batch = projects.slice(i, i + PROJECT_BATCH_SIZE)
     
@@ -126,6 +129,8 @@ async function scanProjectsForIssues(projects, ownerOnly, targetCount = 5) {
     // Validate issues in parallel batches
     for (let j = 0; j < potentialIssues.length; j += ISSUE_BATCH_SIZE) {
       if (results.length >= targetCount) break
+      if (Date.now() - START_TIME > MAX_TIME) break
+      
       const issueBatch = potentialIssues.slice(j, j + ISSUE_BATCH_SIZE)
       
       const validatedResults = await Promise.allSettled(
