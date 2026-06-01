@@ -25,12 +25,15 @@ async function getProjectsList() {
       owner_repo: project.owner_repo || null,
       repo_url: project.repo_url || null,
       project_name: project.name,
+      description: project.description || '',
       difficulty: project.difficulty,
       admin_name: project.admin_name,
       admin_github: project.admin_github,
       has_beginner_issues: project.has_beginner_issues,
       good_first_count: project.good_first_count,
-      unassigned_count: project.unassigned_count
+      unassigned_count: project.unassigned_count,
+      tech_stack: Array.isArray(project.tech_stack) ? project.tech_stack : [],
+      topics: Array.isArray(project.gh?.topics) ? project.gh.topics : []
     }))
     .filter(p => p.owner && p.repo)
 

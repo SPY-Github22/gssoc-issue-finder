@@ -10,6 +10,7 @@ export default function Home() {
   const [difficulty, setDifficulty] = useState('All Levels')
   const [selectedRepo, setSelectedRepo] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [topicInput, setTopicInput] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -18,10 +19,22 @@ export default function Home() {
     fetch('/api/repos').then(r => r.json()).then(setRepos).catch(() => setRepos([]))
   }, [])
 
-  const filteredRepos = repos.filter(r =>
-    r.project_name.toLowerCase().includes(searchInput.toLowerCase()) ||
-    r.owner_repo.toLowerCase().includes(searchInput.toLowerCase())
-  )
+  const filteredRepos = repos.filter(r => {
+    const query = searchInput.toLowerCase()
+    const topic = topicInput.toLowerCase()
+    const matchesSearch =
+      r.project_name.toLowerCase().includes(query) ||
+      r.owner_repo.toLowerCase().includes(query) ||
+      r.description.toLowerCase().includes(query)
+
+    const matchesTopic = !topic ||
+      r.tech_stack.some(t => t.toLowerCase().includes(topic)) ||
+      r.topics.some(t => t.toLowerCase().includes(topic)) ||
+      r.project_name.toLowerCase().includes(topic) ||
+      r.description.toLowerCase().includes(topic)
+
+    return matchesSearch && matchesTopic
+  })
 
   async function getRandom() {
     setLoading(true)
@@ -142,7 +155,14 @@ export default function Home() {
                 onChange={e => setSearchInput(e.target.value)}
                 style={styles.searchInput}
               />
-              {searchInput && (
+              <input
+                type="text"
+                placeholder="Search by topic/tech stack... (e.g., 'AI/ML', 'TypeScript')"
+                value={topicInput}
+                onChange={e => setTopicInput(e.target.value)}
+                style={styles.searchInput}
+              />
+              {(searchInput || topicInput) && (
                 <div style={styles.dropdown}>
                   {filteredRepos.slice(0, 10).map(r => (
                     <div
@@ -155,6 +175,9 @@ export default function Home() {
                     >
                       <div style={styles.dropdownTitle}>{r.project_name}</div>
                       <div style={styles.dropdownMeta}>{r.owner_repo} • {r.difficulty}</div>
+                      {r.tech_stack.length > 0 && (
+                        <div style={styles.dropdownMeta}>{r.tech_stack.slice(0, 4).join(', ')}</div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -177,6 +200,30 @@ export default function Home() {
               >
                 {loading ? 'Searching...' : 'Search Issues'}
               </button>
+              {!selectedRepo && (searchInput || topicInput) && filteredRepos.length > 0 && (
+                <div style={styles.repoResults}>
+                  <h2 style={styles.resultsTitle}>Top matching repositories</h2>
+                  <div style={styles.issuesList}>
+                    {filteredRepos.slice(0, 5).map(repo => (
+                      <div key={repo.owner_repo} style={styles.issueCard}>
+                        <h3 style={styles.issueTitle}>{repo.project_name}</h3>
+                        <div style={styles.issueMeta}>
+                          <span>{repo.owner_repo}</span>
+                          <span>{repo.difficulty}</span>
+                        </div>
+                        <div style={styles.labelsContainer}>
+                          {repo.tech_stack.slice(0, 4).map((tag, i) => (
+                            <span key={i} style={styles.repoTag}>{tag}</span>
+                          ))}
+                          {repo.topics.slice(0, 4).map((tag, i) => (
+                            <span key={`topic-${i}`} style={styles.repoTag}>{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -482,6 +529,18 @@ const styles = {
     fontSize: '14px',
     color: '#94a3b8',
     marginBottom: '12px'
+  },
+  repoResults: {
+    marginTop: '24px'
+  },
+  repoTag: {
+    display: 'inline-block',
+    padding: '4px 8px',
+    borderRadius: '999px',
+    background: '#1f2937',
+    color: '#cbd5e1',
+    fontSize: '12px',
+    fontWeight: '600'
   },
   labelsContainer: {
     display: 'flex',
