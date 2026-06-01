@@ -254,7 +254,7 @@ export default function Home() {
               <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <input
                   type="text"
-                  placeholder="Search repositories... (e.g., 'react', 'python')"
+                  placeholder="Search by repository name... (e.g., 'facebook/react', 'freeCodeCamp')"
                   value={searchInput}
                   onChange={e => setSearchInput(e.target.value)}
                   style={styles.searchInput}
