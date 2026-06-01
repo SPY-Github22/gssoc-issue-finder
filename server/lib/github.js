@@ -219,6 +219,24 @@ const SYNONYMS = {
   'back-end': ['backend']
 }
 
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function isMatch(text, term) {
+  if (!text) return false
+  
+  // For short terms (1-3 chars) like 'js', 'ts', 'ai', 'c#', enforce smart word boundaries
+  // to avoid matching "json", "html", etc.
+  if (term.length <= 3) {
+    const regex = new RegExp(`(^|[^a-z0-9])${escapeRegExp(term)}([^a-z0-9]|$)`, 'i')
+    return regex.test(text)
+  }
+  
+  // For longer terms, simple includes is safer so 'react' matches 'reactjs'
+  return text.toLowerCase().includes(term.toLowerCase())
+}
+
 async function findIssuesBySearch(query, topic, { ownerOnly = true, targetCount = 10 } = {}) {
   let projects = await getProjectsList()
   
@@ -237,16 +255,16 @@ async function findIssuesBySearch(query, topic, { ownerOnly = true, targetCount 
     }
 
     const matchesSearch = !q || queryTerms.some(term =>
-      r.project_name.toLowerCase().includes(term) ||
-      r.owner_repo.toLowerCase().includes(term) ||
-      r.description.toLowerCase().includes(term)
+      isMatch(r.project_name, term) ||
+      isMatch(r.owner_repo, term) ||
+      isMatch(r.description, term)
     )
 
     const matchesTopic = !t || searchTerms.some(term => 
-      r.tech_stack.some(x => x.toLowerCase().includes(term)) ||
-      r.topics.some(x => x.toLowerCase().includes(term)) ||
-      r.project_name.toLowerCase().includes(term) ||
-      r.description.toLowerCase().includes(term)
+      r.tech_stack.some(x => isMatch(x, term)) ||
+      r.topics.some(x => isMatch(x, term)) ||
+      isMatch(r.project_name, term) ||
+      isMatch(r.description, term)
     )
 
     return matchesSearch && matchesTopic

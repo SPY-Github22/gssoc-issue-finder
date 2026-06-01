@@ -31,7 +31,21 @@ const SYNONYMS = {
   'back-end': ['backend']
 }
 
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function isMatch(text, term) {
+  if (!text) return false
+  if (term.length <= 3) {
+    const regex = new RegExp(`(^|[^a-z0-9])${escapeRegExp(term)}([^a-z0-9]|$)`, 'i')
+    return regex.test(text)
+  }
+  return text.toLowerCase().includes(term.toLowerCase())
+}
+
 export default function Home() {
+
   const [repos, setRepos] = useState([])
   const [mode, setMode] = useState('search')
   const [ownerOnly, setOwnerOnly] = useState(true)
@@ -91,10 +105,10 @@ export default function Home() {
     // Find all matching repos locally
     const matching = repos.filter(r => {
       return searchTerms.some(term => 
-        r.tech_stack.some(t => t.toLowerCase().includes(term)) ||
-        r.topics.some(t => t.toLowerCase().includes(term)) ||
-        r.project_name.toLowerCase().includes(term) ||
-        r.description.toLowerCase().includes(term)
+        r.tech_stack.some(t => isMatch(t, term)) ||
+        r.topics.some(t => isMatch(t, term)) ||
+        isMatch(r.project_name, term) ||
+        isMatch(r.description, term)
       )
     }).sort((a, b) => {
       return (b.unassigned_count || 0) - (a.unassigned_count || 0)
