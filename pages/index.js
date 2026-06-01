@@ -254,9 +254,9 @@ export default function Home() {
               <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <input
                   type="text"
-                  placeholder="Search by repository name... (e.g., 'facebook/react', 'freeCodeCamp')"
+                  placeholder="Search by repository name... (e.g., 'mindscapev2', 'zeroly')"
                   value={searchInput}
-                  onChange={e => setSearchInput(e.target.value)}
+                  onChange={e => { setSearchInput(e.target.value); setError(null) }}
                   style={styles.searchInput}
                   onKeyDown={e => e.key === 'Enter' && searchRepo()}
                 />
@@ -264,7 +264,7 @@ export default function Home() {
                   type="text"
                   placeholder="Search by topic/tech stack... (e.g., 'AI/ML', 'TypeScript')"
                   value={topicInput}
-                  onChange={e => setTopicInput(e.target.value)}
+                  onChange={e => { setTopicInput(e.target.value); setError(null) }}
                   style={styles.searchInput}
                   onKeyDown={e => e.key === 'Enter' && searchRepo()}
                 />

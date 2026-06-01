@@ -205,7 +205,8 @@ async function findIssuesBySearch(query, topic, { ownerOnly = true, targetCount 
   // Sort by unassigned_count descending so we search the ones with most issues first
   projects.sort((a, b) => (b.unassigned_count || 0) - (a.unassigned_count || 0))
 
-  return scanProjectsForIssues(projects, ownerOnly, targetCount)
+  const issues = await scanProjectsForIssues(projects, ownerOnly, targetCount)
+  return { issues, projectsCount: projects.length }
 }
 
 async function findIssuesInRepo(owner, repo, { ownerOnly = true } = {}) {
