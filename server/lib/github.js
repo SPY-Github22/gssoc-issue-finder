@@ -60,7 +60,6 @@ function isAnnouncementIssue(title) {
   if (!title) return false
   const lower = title.toLowerCase()
   return ANNOUNCEMENT_KEYWORDS.some(kw => lower.includes(kw)) ||
-         lower.startsWith('important ') ||
          lower.startsWith('reminder ') ||
          lower.startsWith('notice ')
 }
