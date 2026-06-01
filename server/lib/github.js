@@ -15,25 +15,36 @@ function getGitHubHeaders() {
   return headers
 }
 
+const KNOWN_BOTS = [
+  'vercel', 'codecov', 'snyk', 'github-actions', 'dependabot', 
+  'gssoc-bot', 'sweep-repo', 'netlify', 'sonarcloud', 'renovate'
+]
+
 function isBotUsername(name) {
   if (!name) return false
-  return /bot/i.test(name) || /\[bot\]$/i.test(name)
+  const lower = name.toLowerCase()
+  if (/bot/i.test(lower) || lower.endsWith('[bot]') || lower.endsWith('-bot')) return true
+  return KNOWN_BOTS.includes(lower)
 }
 
 async function checkIssueHasLinkedPR(owner, repo, issueNumber) {
-  // Check if issue has any associated/linked pull requests by checking its timeline
+  // Check if issue has any ACTIVE (open and non-draft) pull requests by checking its timeline
   const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues/${issueNumber}/timeline?per_page=50`
   const r = await fetch(url, { headers: getGitHubHeaders() })
   if (!r.ok) return false
   const events = await r.json()
   if (!Array.isArray(events)) return false
 
-  // Look for connected_pr events or PR references
-  return events.some(event =>
-    event.event === 'connected' ||
-    event.event === 'cross-referenced' ||
-    (event.source && event.source.issue && event.source.issue.pull_request)
-  )
+  // Look for cross-referenced PRs that are actually open and not drafts
+  return events.some(event => {
+    if (event.event === 'cross-referenced' && event.source?.issue?.pull_request) {
+      const pr = event.source.issue
+      if (pr.state === 'open' && pr.draft === false) {
+        return true
+      }
+    }
+    return false
+  })
 }
 
 async function fetchOpenIssues(owner, repo) {
