@@ -15,7 +15,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
-  const [currentPage, setCurrentPage] = useState(0)
+  const [leaderboardInput, setLeaderboardInput] = useState('')
+  const [leaderboardPage, setLeaderboardPage] = useState(0)
 
   useEffect(() => {
     fetch('/api/repos').then(r => r.json()).then(setRepos).catch(() => setRepos([]))
@@ -54,6 +55,15 @@ export default function Home() {
       r.description.toLowerCase().includes(topic)
 
     return matchesSearch && matchesTopic
+  })
+
+  const leaderboardRepos = repos.filter(r => {
+    const topic = leaderboardInput.toLowerCase()
+    if (!topic) return false
+    return r.tech_stack.some(t => t.toLowerCase().includes(topic)) ||
+           r.topics.some(t => t.toLowerCase().includes(topic)) ||
+           r.project_name.toLowerCase().includes(topic) ||
+           r.description.toLowerCase().includes(topic)
   }).sort((a, b) => {
     return (b.unassigned_count || 0) - (a.unassigned_count || 0)
   })
@@ -181,14 +191,14 @@ export default function Home() {
                   type="text"
                   placeholder="Search repositories... (e.g., 'react', 'python')"
                   value={searchInput}
-                  onChange={e => { setSearchInput(e.target.value); setCurrentPage(0); }}
+                  onChange={e => setSearchInput(e.target.value)}
                   style={styles.searchInput}
                 />
                 <input
                   type="text"
                   placeholder="Search by topic/tech stack... (e.g., 'AI/ML', 'TypeScript')"
                   value={topicInput}
-                  onChange={e => { setTopicInput(e.target.value); setCurrentPage(0); }}
+                  onChange={e => setTopicInput(e.target.value)}
                   style={styles.searchInput}
                 />
                 {(searchInput || topicInput) && (
@@ -232,14 +242,11 @@ export default function Home() {
               </button>
               {!selectedRepo && (searchInput || topicInput) && filteredRepos.length > 0 && (
                 <div style={styles.repoResults}>
-                  <h2 style={styles.resultsTitle}>Top matching projects</h2>
+                  <h2 style={styles.resultsTitle}>Top matching repositories</h2>
                   <div style={styles.issuesList}>
-                    {filteredRepos.slice(currentPage * 5, (currentPage + 1) * 5).map(repo => (
-                      <a key={repo.owner_repo} style={styles.issueCard} href={repo.repo_url} target="_blank" rel="noreferrer">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <h3 style={styles.issueTitle}>{repo.project_name}</h3>
-                          <span style={styles.openIssuesBadge}>{repo.unassigned_count || 0} open issues</span>
-                        </div>
+                    {filteredRepos.slice(0, 5).map(repo => (
+                      <div key={repo.owner_repo} style={styles.issueCard}>
+                        <h3 style={styles.issueTitle}>{repo.project_name}</h3>
                         <div style={styles.issueMeta}>
                           <span>{repo.owner_repo}</span>
                           <span>{repo.difficulty}</span>
@@ -252,30 +259,73 @@ export default function Home() {
                             <span key={`topic-${i}`} style={styles.repoTag}>{tag}</span>
                           ))}
                         </div>
-                      </a>
+                      </div>
                     ))}
                   </div>
-                  {filteredRepos.length > 5 && (
-                    <div style={styles.pagination}>
-                      <button 
-                        onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                        disabled={currentPage === 0}
-                        style={{ ...styles.pageBtn, ...(currentPage === 0 ? styles.pageBtnDisabled : {}) }}
-                      >
-                        ← Previous
-                      </button>
-                      <span style={styles.pageText}>Page {currentPage + 1} of {Math.ceil(filteredRepos.length / 5)}</span>
-                      <button 
-                        onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredRepos.length / 5) - 1, p + 1))}
-                        disabled={currentPage >= Math.ceil(filteredRepos.length / 5) - 1}
-                        style={{ ...styles.pageBtn, ...(currentPage >= Math.ceil(filteredRepos.length / 5) - 1 ? styles.pageBtnDisabled : {}) }}
-                      >
-                        Next →
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
+              
+              <div style={{...styles.repoResults, borderTop: '1px solid #1f2937', paddingTop: '24px', marginTop: '32px'}}>
+                <h2 style={{...styles.resultsTitle, color: '#38bdf8'}}>Most Workable Issues (Leaderboard)</h2>
+                <input
+                  type="text"
+                  placeholder="Enter a tech stack (e.g. 'React', 'Python') to see top projects..."
+                  value={leaderboardInput}
+                  onChange={e => { setLeaderboardInput(e.target.value); setLeaderboardPage(0); }}
+                  style={{...styles.searchInput, width: '100%'}}
+                />
+                
+                {leaderboardInput && leaderboardRepos.length > 0 && (
+                  <div style={{marginTop: '16px'}}>
+                    <div style={styles.issuesList}>
+                      {leaderboardRepos.slice(leaderboardPage * 5, (leaderboardPage + 1) * 5).map(repo => (
+                        <a key={repo.owner_repo} style={styles.issueCard} href={repo.repo_url} target="_blank" rel="noreferrer">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <h3 style={styles.issueTitle}>{repo.project_name}</h3>
+                            <span style={styles.openIssuesBadge}>{repo.unassigned_count || 0} open issues</span>
+                          </div>
+                          <div style={styles.issueMeta}>
+                            <span>{repo.owner_repo}</span>
+                            <span>{repo.difficulty}</span>
+                          </div>
+                          <div style={styles.labelsContainer}>
+                            {repo.tech_stack.slice(0, 4).map((tag, i) => (
+                              <span key={i} style={styles.repoTag}>{tag}</span>
+                            ))}
+                            {repo.topics.slice(0, 4).map((tag, i) => (
+                              <span key={`topic-${i}`} style={styles.repoTag}>{tag}</span>
+                            ))}
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                    {leaderboardRepos.length > 5 && (
+                      <div style={styles.pagination}>
+                        <button 
+                          onClick={() => setLeaderboardPage(p => Math.max(0, p - 1))}
+                          disabled={leaderboardPage === 0}
+                          style={{ ...styles.pageBtn, ...(leaderboardPage === 0 ? styles.pageBtnDisabled : {}) }}
+                        >
+                          ← Previous
+                        </button>
+                        <span style={styles.pageText}>Page {leaderboardPage + 1} of {Math.ceil(leaderboardRepos.length / 5)}</span>
+                        <button 
+                          onClick={() => setLeaderboardPage(p => Math.min(Math.ceil(leaderboardRepos.length / 5) - 1, p + 1))}
+                          disabled={leaderboardPage >= Math.ceil(leaderboardRepos.length / 5) - 1}
+                          style={{ ...styles.pageBtn, ...(leaderboardPage >= Math.ceil(leaderboardRepos.length / 5) - 1 ? styles.pageBtnDisabled : {}) }}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {leaderboardInput && leaderboardRepos.length === 0 && (
+                  <div style={{marginTop: '16px', color: '#94a3b8', fontSize: '14px'}}>
+                    No projects found for this tech stack.
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
