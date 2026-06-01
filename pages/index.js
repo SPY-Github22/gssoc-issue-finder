@@ -52,14 +52,21 @@ export default function Home() {
   }
 
   async function searchRepo() {
-    if (!selectedRepo) {
-      setError('Please select a repository')
+    let repoToSearch = selectedRepo
+    if (!repoToSearch && filteredRepos.length > 0) {
+      repoToSearch = filteredRepos[0].owner_repo
+      setSelectedRepo(repoToSearch)
+    }
+
+    if (!repoToSearch) {
+      setError('Please select a repository or enter a matching query/topic')
       return
     }
+
     setLoading(true)
     setError(null)
     setResults([])
-    const res = await fetch(`/api/issues/search?repo=${selectedRepo}&ownerOnly=${ownerOnly}`)
+    const res = await fetch(`/api/issues/search?repo=${repoToSearch}&ownerOnly=${ownerOnly}`)
     const data = await res.json()
     setLoading(false)
     if (data.error) {
@@ -195,11 +202,16 @@ export default function Home() {
               )}
               <button
                 onClick={searchRepo}
-                disabled={!selectedRepo || loading}
+                disabled={(!selectedRepo && filteredRepos.length === 0) || loading}
                 style={{...styles.primaryBtn, ...styles.searchBtn}}
               >
                 {loading ? 'Searching...' : 'Search Issues'}
               </button>
+              {loading && (
+                <div style={styles.searchInfo}>
+                  Searching... please wait, there are a lot of repositories to go through. This might take a while.
+                </div>
+              )}
               {!selectedRepo && (searchInput || topicInput) && filteredRepos.length > 0 && (
                 <div style={styles.repoResults}>
                   <h2 style={styles.resultsTitle}>Top matching repositories</h2>
@@ -554,6 +566,16 @@ const styles = {
     justifyContent: 'space-between',
     paddingTop: '12px',
     borderTop: '1px solid #1f2937'
+  },
+  searchInfo: {
+    marginTop: '16px',
+    padding: '14px 16px',
+    borderRadius: '14px',
+    background: '#111827',
+    color: '#cbd5e1',
+    border: '1px solid #334155',
+    fontSize: '14px',
+    lineHeight: '1.6'
   },
   badge: {
     padding: '6px 12px',
