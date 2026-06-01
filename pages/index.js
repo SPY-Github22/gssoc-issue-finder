@@ -14,10 +14,29 @@ export default function Home() {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [timeElapsed, setTimeElapsed] = useState(0)
 
   useEffect(() => {
     fetch('/api/repos').then(r => r.json()).then(setRepos).catch(() => setRepos([]))
   }, [])
+
+  useEffect(() => {
+    let timer
+    if (loading) {
+      timer = setInterval(() => {
+        setTimeElapsed(prev => prev + 1)
+      }, 1000)
+    } else {
+      setTimeElapsed(0)
+    }
+    return () => clearInterval(timer)
+  }, [loading])
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
 
   const filteredRepos = repos.filter(r => {
     const query = searchInput.toLowerCase()
@@ -154,40 +173,42 @@ export default function Home() {
           ) : (
             <div style={styles.searchSection}>
               <p style={styles.label}>Select a Repository:</p>
-              <input
-                type="text"
-                placeholder="Search repositories... (e.g., 'react', 'python')"
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                style={styles.searchInput}
-              />
-              <input
-                type="text"
-                placeholder="Search by topic/tech stack... (e.g., 'AI/ML', 'TypeScript')"
-                value={topicInput}
-                onChange={e => setTopicInput(e.target.value)}
-                style={styles.searchInput}
-              />
-              {(searchInput || topicInput) && (
-                <div style={styles.dropdown}>
-                  {filteredRepos.slice(0, 10).map(r => (
-                    <div
-                      key={r.owner_repo}
-                      onClick={() => {
-                        setSelectedRepo(r.owner_repo)
-                        setSearchInput('')
-                      }}
-                      style={styles.dropdownItem}
-                    >
-                      <div style={styles.dropdownTitle}>{r.project_name}</div>
-                      <div style={styles.dropdownMeta}>{r.owner_repo} • {r.difficulty}</div>
-                      {r.tech_stack.length > 0 && (
-                        <div style={styles.dropdownMeta}>{r.tech_stack.slice(0, 4).join(', ')}</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <input
+                  type="text"
+                  placeholder="Search repositories... (e.g., 'react', 'python')"
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  style={styles.searchInput}
+                />
+                <input
+                  type="text"
+                  placeholder="Search by topic/tech stack... (e.g., 'AI/ML', 'TypeScript')"
+                  value={topicInput}
+                  onChange={e => setTopicInput(e.target.value)}
+                  style={styles.searchInput}
+                />
+                {(searchInput || topicInput) && (
+                  <div style={styles.dropdown}>
+                    {filteredRepos.slice(0, 10).map(r => (
+                      <div
+                        key={r.owner_repo}
+                        onClick={() => {
+                          setSelectedRepo(r.owner_repo)
+                          setSearchInput('')
+                        }}
+                        style={styles.dropdownItem}
+                      >
+                        <div style={styles.dropdownTitle}>{r.project_name}</div>
+                        <div style={styles.dropdownMeta}>{r.owner_repo} • {r.difficulty}</div>
+                        {r.tech_stack.length > 0 && (
+                          <div style={styles.dropdownMeta}>{r.tech_stack.slice(0, 4).join(', ')}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {selectedRepo && (
                 <div style={styles.selectedRepo}>
                   <span style={styles.selectedRepoText}>{repoDisplay?.project_name}</span>
@@ -206,11 +227,6 @@ export default function Home() {
               >
                 {loading ? 'Searching...' : 'Search Issues'}
               </button>
-              {loading && (
-                <div style={styles.searchInfo}>
-                  Searching... please wait, there are a lot of repositories to go through. This might take a while.
-                </div>
-              )}
               {!selectedRepo && (searchInput || topicInput) && filteredRepos.length > 0 && (
                 <div style={styles.repoResults}>
                   <h2 style={styles.resultsTitle}>Top matching repositories</h2>
@@ -238,6 +254,13 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {loading && (
+          <div style={styles.searchInfo}>
+            <div style={styles.timerClock}>{formatTime(timeElapsed)}</div>
+            <div>Searching... please wait, there are a lot of repositories to go through. This might take a while.</div>
+          </div>
+        )}
 
         {error && (
           <div style={styles.errorBox}>
@@ -567,14 +590,24 @@ const styles = {
     borderTop: '1px solid #1f2937'
   },
   searchInfo: {
-    marginTop: '16px',
-    padding: '14px 16px',
+    marginBottom: '24px',
+    padding: '24px 16px',
     borderRadius: '14px',
-    background: '#111827',
+    background: '#0f172a',
     color: '#cbd5e1',
     border: '1px solid #334155',
-    fontSize: '14px',
-    lineHeight: '1.6'
+    fontSize: '15px',
+    lineHeight: '1.6',
+    textAlign: 'center',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+  },
+  timerClock: {
+    fontSize: '32px',
+    fontWeight: 'bold',
+    color: '#38bdf8',
+    marginBottom: '12px',
+    fontFamily: 'monospace',
+    letterSpacing: '2px'
   },
   badge: {
     padding: '6px 12px',

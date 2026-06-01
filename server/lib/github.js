@@ -84,7 +84,6 @@ function shuffle(array) {
 async function pickRandomIssueForRepos({ ownerOnly = true, difficulty = null } = {}) {
   let projects = await getProjectsList()
   
-  // Filter by difficulty if specified
   if (difficulty && difficulty !== 'All') {
     projects = projects.filter(p => p.difficulty === difficulty)
   }
@@ -92,44 +91,71 @@ async function pickRandomIssueForRepos({ ownerOnly = true, difficulty = null } =
   shuffle(projects)
   const results = []
   const targetCount = 5
+  const PROJECT_BATCH_SIZE = 5
+  const ISSUE_BATCH_SIZE = 10
 
-  for (const p of projects) {
+  for (let i = 0; i < projects.length; i += PROJECT_BATCH_SIZE) {
     if (results.length >= targetCount) break
     
-    try {
-      const issues = await fetchOpenIssues(p.owner, p.repo)
-      for (const issue of issues) {
-        if (results.length >= targetCount) break
-        
-        if (ownerOnly && issue.user?.toLowerCase() !== p.owner.toLowerCase()) {
-          continue
-        }
+    const batch = projects.slice(i, i + PROJECT_BATCH_SIZE)
+    
+    // Fetch open issues for projects in parallel
+    const batchIssues = await Promise.allSettled(
+      batch.map(async p => {
+        const issues = await fetchOpenIssues(p.owner, p.repo)
+        return { p, issues }
+      })
+    )
 
-        let commentAuthors = []
-        if (issue.comments > 0) {
-          commentAuthors = await fetchIssueCommentAuthors(issue.comments_url)
-          if (hasHumanComments(commentAuthors, issue.user)) {
+    const potentialIssues = []
+    for (const result of batchIssues) {
+      if (result.status === 'fulfilled' && result.value.issues) {
+        const { p, issues } = result.value
+        for (const issue of issues) {
+          if (ownerOnly && issue.user?.toLowerCase() !== p.owner.toLowerCase()) {
             continue
           }
+          potentialIssues.push({ p, issue })
         }
-
-        // Check if issue is linked to a PR
-        const hasLinkedPR = await checkIssueHasLinkedPR(p.owner, p.repo, issue.number)
-        if (hasLinkedPR) continue
-
-        results.push({
-          repo: `${p.owner}/${p.repo}`,
-          title: issue.title,
-          user: issue.user,
-          comments: issue.comments,
-          labels: issue.labels,
-          html_url: issue.html_url,
-          difficulty: p.difficulty,
-          project_name: p.project_name
-        })
       }
-    } catch (error) {
-      continue
+    }
+
+    // Validate issues in parallel batches
+    for (let j = 0; j < potentialIssues.length; j += ISSUE_BATCH_SIZE) {
+      if (results.length >= targetCount) break
+      const issueBatch = potentialIssues.slice(j, j + ISSUE_BATCH_SIZE)
+      
+      const validatedResults = await Promise.allSettled(
+        issueBatch.map(async ({ p, issue }) => {
+          if (issue.comments > 0) {
+            const commentAuthors = await fetchIssueCommentAuthors(issue.comments_url)
+            if (hasHumanComments(commentAuthors, issue.user)) {
+              return null
+            }
+          }
+          const hasLinkedPR = await checkIssueHasLinkedPR(p.owner, p.repo, issue.number)
+          if (hasLinkedPR) return null
+
+          return {
+            repo: `${p.owner}/${p.repo}`,
+            title: issue.title,
+            user: issue.user,
+            comments: issue.comments,
+            labels: issue.labels,
+            html_url: issue.html_url,
+            difficulty: p.difficulty,
+            project_name: p.project_name
+          }
+        })
+      )
+
+      for (const vResult of validatedResults) {
+        if (vResult.status === 'fulfilled' && vResult.value) {
+          if (results.length < targetCount) {
+            results.push(vResult.value)
+          }
+        }
+      }
     }
   }
 
