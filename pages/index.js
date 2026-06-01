@@ -59,23 +59,6 @@ export default function Home() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
-  const filteredRepos = repos.filter(r => {
-    const query = searchInput.toLowerCase()
-    const topic = topicInput.toLowerCase()
-    const matchesSearch =
-      r.project_name.toLowerCase().includes(query) ||
-      r.owner_repo.toLowerCase().includes(query) ||
-      r.description.toLowerCase().includes(query)
-
-    const matchesTopic = !topic ||
-      r.tech_stack.some(t => t.toLowerCase().includes(topic)) ||
-      r.topics.some(t => t.toLowerCase().includes(topic)) ||
-      r.project_name.toLowerCase().includes(topic) ||
-      r.description.toLowerCase().includes(topic)
-
-    return matchesSearch && matchesTopic
-  })
-
   const fetchLeaderboard = async (isNext = false) => {
     const topic = leaderboardInput.toLowerCase()
     if (!topic) return
@@ -562,56 +545,6 @@ const styles = {
     fontFamily: 'inherit',
     background: '#0f172a',
     color: '#e2e8f0'
-  },
-  dropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    background: '#111827',
-    border: '2px solid #334155',
-    borderTop: 'none',
-    borderRadius: '0 0 12px 12px',
-    maxHeight: '300px',
-    overflowY: 'auto',
-    zIndex: 10
-  },
-  dropdownItem: {
-    padding: '12px 16px',
-    cursor: 'pointer',
-    transition: 'background 0.2s ease',
-    borderBottom: '1px solid #1f2937',
-    color: '#e2e8f0'
-  },
-  dropdownTitle: {
-    fontWeight: '600',
-    color: '#f8fafc',
-    marginBottom: '4px'
-  },
-  dropdownMeta: {
-    fontSize: '13px',
-    color: '#94a3b8'
-  },
-  selectedRepo: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    background: '#111827',
-    borderRadius: '12px',
-    border: '2px solid #334155'
-  },
-  selectedRepoText: {
-    fontWeight: '600',
-    color: '#e2e8f0'
-  },
-  clearBtn: {
-    background: 'none',
-    border: '1px solid #334155',
-    fontSize: '14px',
-    cursor: 'pointer',
-    padding: '8px 12px',
-    color: '#cbd5e1'
   },
   primaryBtn: {
     padding: '14px 24px',
