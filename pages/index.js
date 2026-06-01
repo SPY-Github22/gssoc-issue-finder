@@ -3,6 +3,14 @@ import { useEffect, useState } from 'react'
 
 const DIFFICULTIES = ['All Levels', 'Beginner Friendly', 'Intermediate', 'Advanced']
 
+const REPO_PLACEHOLDERS = [
+  "e.g., 'mindscapev2'",
+  "e.g., 'zeroly'",
+  "e.g., 'gitfarm'",
+  "e.g., 'AyurvaEase'",
+  "e.g., 'CodeCraft'"
+]
+
 export default function Home() {
   const [repos, setRepos] = useState([])
   const [mode, setMode] = useState('search')
@@ -13,6 +21,7 @@ export default function Home() {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [repoPlaceholderIdx, setRepoPlaceholderIdx] = useState(0)
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [leaderboardInput, setLeaderboardInput] = useState('')
   const [leaderboardPage, setLeaderboardPage] = useState(0)
@@ -23,6 +32,13 @@ export default function Home() {
 
   useEffect(() => {
     fetch('/api/repos').then(r => r.json()).then(setRepos).catch(() => setRepos([]))
+  }, [])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRepoPlaceholderIdx(i => (i + 1) % REPO_PLACEHOLDERS.length)
+    }, 2500)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
@@ -254,7 +270,7 @@ export default function Home() {
               <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <input
                   type="text"
-                  placeholder="Search by repository name... (e.g., 'mindscapev2', 'zeroly')"
+                  placeholder={`Search by repository name... (${REPO_PLACEHOLDERS[repoPlaceholderIdx]})`}
                   value={searchInput}
                   onChange={e => { setSearchInput(e.target.value); setError(null) }}
                   style={styles.searchInput}
