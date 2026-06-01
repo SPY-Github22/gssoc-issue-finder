@@ -95,7 +95,6 @@ export default function Home() {
       <main style={styles.main}>
         <div style={styles.header}>
           <h1 style={styles.title}>GSSoC Issue Finder</h1>
-          <p style={styles.subtitle}>Discover open-source issues with zero human comments</p>
         </div>
 
         <div style={styles.card}>
