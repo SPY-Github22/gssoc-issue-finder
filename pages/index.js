@@ -15,6 +15,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
+  const [currentPage, setCurrentPage] = useState(0)
 
   useEffect(() => {
     fetch('/api/repos').then(r => r.json()).then(setRepos).catch(() => setRepos([]))
@@ -53,6 +54,8 @@ export default function Home() {
       r.description.toLowerCase().includes(topic)
 
     return matchesSearch && matchesTopic
+  }).sort((a, b) => {
+    return (b.unassigned_count || 0) - (a.unassigned_count || 0)
   })
 
   async function getRandom() {
@@ -178,14 +181,14 @@ export default function Home() {
                   type="text"
                   placeholder="Search repositories... (e.g., 'react', 'python')"
                   value={searchInput}
-                  onChange={e => setSearchInput(e.target.value)}
+                  onChange={e => { setSearchInput(e.target.value); setCurrentPage(0); }}
                   style={styles.searchInput}
                 />
                 <input
                   type="text"
                   placeholder="Search by topic/tech stack... (e.g., 'AI/ML', 'TypeScript')"
                   value={topicInput}
-                  onChange={e => setTopicInput(e.target.value)}
+                  onChange={e => { setTopicInput(e.target.value); setCurrentPage(0); }}
                   style={styles.searchInput}
                 />
                 {(searchInput || topicInput) && (
@@ -229,11 +232,14 @@ export default function Home() {
               </button>
               {!selectedRepo && (searchInput || topicInput) && filteredRepos.length > 0 && (
                 <div style={styles.repoResults}>
-                  <h2 style={styles.resultsTitle}>Top matching repositories</h2>
+                  <h2 style={styles.resultsTitle}>Top matching projects</h2>
                   <div style={styles.issuesList}>
-                    {filteredRepos.slice(0, 5).map(repo => (
-                      <div key={repo.owner_repo} style={styles.issueCard}>
-                        <h3 style={styles.issueTitle}>{repo.project_name}</h3>
+                    {filteredRepos.slice(currentPage * 5, (currentPage + 1) * 5).map(repo => (
+                      <a key={repo.owner_repo} style={styles.issueCard} href={repo.repo_url} target="_blank" rel="noreferrer">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <h3 style={styles.issueTitle}>{repo.project_name}</h3>
+                          <span style={styles.openIssuesBadge}>{repo.unassigned_count || 0} open issues</span>
+                        </div>
                         <div style={styles.issueMeta}>
                           <span>{repo.owner_repo}</span>
                           <span>{repo.difficulty}</span>
@@ -246,9 +252,28 @@ export default function Home() {
                             <span key={`topic-${i}`} style={styles.repoTag}>{tag}</span>
                           ))}
                         </div>
-                      </div>
+                      </a>
                     ))}
                   </div>
+                  {filteredRepos.length > 5 && (
+                    <div style={styles.pagination}>
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                        disabled={currentPage === 0}
+                        style={{ ...styles.pageBtn, ...(currentPage === 0 ? styles.pageBtnDisabled : {}) }}
+                      >
+                        ← Previous
+                      </button>
+                      <span style={styles.pageText}>Page {currentPage + 1} of {Math.ceil(filteredRepos.length / 5)}</span>
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredRepos.length / 5) - 1, p + 1))}
+                        disabled={currentPage >= Math.ceil(filteredRepos.length / 5) - 1}
+                        style={{ ...styles.pageBtn, ...(currentPage >= Math.ceil(filteredRepos.length / 5) - 1 ? styles.pageBtnDisabled : {}) }}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -620,5 +645,41 @@ const styles = {
     fontSize: '13px',
     color: '#94a3b8',
     fontWeight: '500'
+  },
+  pagination: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '20px'
+  },
+  pageBtn: {
+    padding: '8px 16px',
+    background: '#1f2937',
+    border: '1px solid #334155',
+    borderRadius: '8px',
+    color: '#e2e8f0',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+    transition: 'all 0.2s ease'
+  },
+  pageBtnDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed'
+  },
+  pageText: {
+    color: '#94a3b8',
+    fontSize: '14px',
+    fontWeight: '500'
+  },
+  openIssuesBadge: {
+    background: '#16a34a',
+    color: 'white',
+    padding: '4px 10px',
+    borderRadius: '20px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    whiteSpace: 'nowrap',
+    marginLeft: '12px'
   }
 }
