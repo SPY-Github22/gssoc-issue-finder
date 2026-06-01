@@ -100,8 +100,8 @@ export default function Home() {
       return (b.unassigned_count || 0) - (a.unassigned_count || 0)
     })
 
-    const newOffset = isNext ? leaderboardOffset + (leaderboardOffset === 0 ? 15 : 10) : 0
-    const takeCount = newOffset === 0 ? 15 : 10
+    const newOffset = isNext ? leaderboardOffset + 10 : 0
+    const takeCount = 10
     
     const batch = matching.slice(newOffset, newOffset + takeCount)
     if (batch.length === 0) {
@@ -132,8 +132,8 @@ export default function Home() {
         // Sort by strict_count desc
         enriched.sort((a, b) => b.strict_count - a.strict_count)
         
-        // Take top 5
-        setLeaderboardResults(enriched.slice(0, 5))
+        // Take top 10
+        setLeaderboardResults(enriched.slice(0, 10))
         setLeaderboardOffset(newOffset)
         setHasMoreLeaderboard(newOffset + takeCount < matching.length)
       }
@@ -317,7 +317,7 @@ export default function Home() {
               <div style={{...styles.repoResults, borderTop: '1px solid #1f2937', paddingTop: '24px', marginTop: '32px'}}>
                 <h2 style={{...styles.resultsTitle, color: '#38bdf8'}}>Top Verified Projects (Leaderboard)</h2>
                 <p style={{color: '#94a3b8', fontSize: '14px', marginBottom: '16px'}}>
-                  Enter a tech stack. We will batch scan projects on GitHub for strict workable issues (0 human comments, no PRs) and rank the top 5!
+                  Enter a tech stack. We will batch scan projects on GitHub for strict workable issues (0 human comments, no PRs) and rank the top 10!
                 </p>
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <input

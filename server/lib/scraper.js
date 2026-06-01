@@ -7,7 +7,7 @@ let cachedAt = 0
 
 async function getProjectsList() {
   if (cachedProjects && Date.now() - cachedAt < CACHE_TTL_MS) {
-    return cachedProjects
+    return [...cachedProjects]
   }
 
   const resp = await fetch(GSSOC_PROJECTS_API)
@@ -39,7 +39,7 @@ async function getProjectsList() {
 
   cachedProjects = projects
   cachedAt = Date.now()
-  return projects
+  return [...projects]
 }
 
 module.exports = { getProjectsList }

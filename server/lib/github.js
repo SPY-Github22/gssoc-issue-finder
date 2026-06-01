@@ -112,8 +112,8 @@ function shuffle(array) {
 
 async function scanProjectsForIssues(projects, ownerOnly, targetCount = 5) {
   const results = []
-  const PROJECT_BATCH_SIZE = 5
-  const ISSUE_BATCH_SIZE = 10
+  const PROJECT_BATCH_SIZE = 10
+  const ISSUE_BATCH_SIZE = 30
   const START_TIME = Date.now()
   const MAX_TIME = 7500 // 7.5 seconds safety limit before Vercel 10s cutoff
 
