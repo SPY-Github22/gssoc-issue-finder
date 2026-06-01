@@ -212,4 +212,43 @@ async function findIssuesInRepo(owner, repo, { ownerOnly = true } = {}) {
   }
 }
 
-module.exports = { pickRandomIssueForRepos, findIssuesInRepo }
+async function getStrictCountsForRepos(reposList, { ownerOnly = true } = {}) {
+  const results = await Promise.allSettled(
+    reposList.map(async ({ owner, repo }) => {
+      try {
+        const issues = await fetchOpenIssues(owner, repo)
+        let strictCount = 0
+        const MAX_COUNT = 5 // Cap the count at 5 for performance
+        
+        for (const issue of issues) {
+          if (strictCount >= MAX_COUNT) break
+          
+          if (ownerOnly && issue.user?.toLowerCase() !== owner.toLowerCase()) {
+            continue
+          }
+
+          let commentAuthors = []
+          if (issue.comments > 0) {
+            commentAuthors = await fetchIssueCommentAuthors(issue.comments_url)
+            if (hasHumanComments(commentAuthors, issue.user)) {
+              continue
+            }
+          }
+
+          const hasLinkedPR = await checkIssueHasLinkedPR(owner, repo, issue.number)
+          if (hasLinkedPR) continue
+
+          strictCount++
+        }
+        
+        return { owner_repo: `${owner}/${repo}`, strict_count: strictCount }
+      } catch (error) {
+        return { owner_repo: `${owner}/${repo}`, strict_count: 0 }
+      }
+    })
+  )
+  
+  return results.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean)
+}
+
+module.exports = { pickRandomIssueForRepos, findIssuesInRepo, getStrictCountsForRepos }

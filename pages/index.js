@@ -12,11 +12,12 @@ export default function Home() {
   const [searchInput, setSearchInput] = useState('')
   const [topicInput, setTopicInput] = useState('')
   const [results, setResults] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [timeElapsed, setTimeElapsed] = useState(0)
   const [leaderboardInput, setLeaderboardInput] = useState('')
   const [leaderboardPage, setLeaderboardPage] = useState(0)
+  const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(false)
+  const [leaderboardResults, setLeaderboardResults] = useState([])
+  const [leaderboardOffset, setLeaderboardOffset] = useState(0)
+  const [hasMoreLeaderboard, setHasMoreLeaderboard] = useState(true)
 
   useEffect(() => {
     fetch('/api/repos').then(r => r.json()).then(setRepos).catch(() => setRepos([]))
@@ -57,16 +58,62 @@ export default function Home() {
     return matchesSearch && matchesTopic
   })
 
-  const leaderboardRepos = repos.filter(r => {
+  const fetchLeaderboard = async (isNext = false) => {
     const topic = leaderboardInput.toLowerCase()
-    if (!topic) return false
-    return r.tech_stack.some(t => t.toLowerCase().includes(topic)) ||
-           r.topics.some(t => t.toLowerCase().includes(topic)) ||
-           r.project_name.toLowerCase().includes(topic) ||
-           r.description.toLowerCase().includes(topic)
-  }).sort((a, b) => {
-    return (b.unassigned_count || 0) - (a.unassigned_count || 0)
-  })
+    if (!topic) return
+    
+    // Find all matching repos locally
+    const matching = repos.filter(r => {
+      return r.tech_stack.some(t => t.toLowerCase().includes(topic)) ||
+             r.topics.some(t => t.toLowerCase().includes(topic)) ||
+             r.project_name.toLowerCase().includes(topic) ||
+             r.description.toLowerCase().includes(topic)
+    }).sort((a, b) => {
+      return (b.unassigned_count || 0) - (a.unassigned_count || 0)
+    })
+
+    const newOffset = isNext ? leaderboardOffset + (leaderboardOffset === 0 ? 15 : 10) : 0
+    const takeCount = newOffset === 0 ? 15 : 10
+    
+    const batch = matching.slice(newOffset, newOffset + takeCount)
+    if (batch.length === 0) {
+      setHasMoreLeaderboard(false)
+      if (!isNext) setLeaderboardResults([])
+      return
+    }
+
+    setIsLeaderboardLoading(true)
+    try {
+      const payload = batch.map(r => {
+        const [owner, repo] = r.owner_repo.split('/')
+        return { owner, repo }
+      })
+      const res = await fetch('/api/issues/strict-counts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repos: payload, ownerOnly })
+      })
+      const data = await res.json()
+      if (data.counts) {
+        // map strict_counts back to batch
+        const enriched = batch.map(r => {
+          const match = data.counts.find(c => c.owner_repo === r.owner_repo)
+          return { ...r, strict_count: match ? match.strict_count : 0 }
+        })
+        
+        // Sort by strict_count desc
+        enriched.sort((a, b) => b.strict_count - a.strict_count)
+        
+        // Take top 5
+        setLeaderboardResults(enriched.slice(0, 5))
+        setLeaderboardOffset(newOffset)
+        setHasMoreLeaderboard(newOffset + takeCount < matching.length)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    setIsLeaderboardLoading(false)
+  }
 
   async function getRandom() {
     setLoading(true)
@@ -266,23 +313,44 @@ export default function Home() {
               )}
               
               <div style={{...styles.repoResults, borderTop: '1px solid #1f2937', paddingTop: '24px', marginTop: '32px'}}>
-                <h2 style={{...styles.resultsTitle, color: '#38bdf8'}}>Most Workable Issues (Leaderboard)</h2>
-                <input
-                  type="text"
-                  placeholder="Enter a tech stack (e.g. 'React', 'Python') to see top projects..."
-                  value={leaderboardInput}
-                  onChange={e => { setLeaderboardInput(e.target.value); setLeaderboardPage(0); }}
-                  style={{...styles.searchInput, width: '100%'}}
-                />
+                <h2 style={{...styles.resultsTitle, color: '#38bdf8'}}>Live Workable Issues (Leaderboard)</h2>
+                <p style={{color: '#94a3b8', fontSize: '14px', marginBottom: '16px'}}>
+                  Enter a tech stack. We will batch scan projects on GitHub for strict workable issues (0 human comments, no PRs) and rank the top 5!
+                </p>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter a tech stack (e.g. 'React', 'Python')..."
+                    value={leaderboardInput}
+                    onChange={e => setLeaderboardInput(e.target.value)}
+                    style={{...styles.searchInput, flex: 1}}
+                    onKeyDown={e => e.key === 'Enter' && fetchLeaderboard(false)}
+                  />
+                  <button
+                    onClick={() => fetchLeaderboard(false)}
+                    disabled={isLeaderboardLoading || !leaderboardInput}
+                    style={{...styles.primaryBtn, background: '#38bdf8', color: '#0f172a', whiteSpace: 'nowrap'}}
+                  >
+                    {isLeaderboardLoading ? 'Scanning...' : 'Search Live'}
+                  </button>
+                </div>
                 
-                {leaderboardInput && leaderboardRepos.length > 0 && (
-                  <div style={{marginTop: '16px'}}>
+                {isLeaderboardLoading && (
+                  <div style={{marginTop: '24px', textAlign: 'center', color: '#38bdf8', fontWeight: '500'}}>
+                    Scanning live issues on GitHub... this might take 5-10 seconds!
+                  </div>
+                )}
+
+                {!isLeaderboardLoading && leaderboardResults.length > 0 && (
+                  <div style={{marginTop: '24px'}}>
                     <div style={styles.issuesList}>
-                      {leaderboardRepos.slice(leaderboardPage * 5, (leaderboardPage + 1) * 5).map(repo => (
+                      {leaderboardResults.map(repo => (
                         <a key={repo.owner_repo} style={styles.issueCard} href={repo.repo_url} target="_blank" rel="noreferrer">
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <h3 style={styles.issueTitle}>{repo.project_name}</h3>
-                            <span style={styles.openIssuesBadge}>{repo.unassigned_count || 0} open issues</span>
+                            <span style={{...styles.openIssuesBadge, background: '#38bdf8', color: '#0f172a'}}>
+                              {repo.strict_count}{repo.strict_count === 5 ? '+' : ''} strict open issues
+                            </span>
                           </div>
                           <div style={styles.issueMeta}>
                             <span>{repo.owner_repo}</span>
@@ -299,30 +367,22 @@ export default function Home() {
                         </a>
                       ))}
                     </div>
-                    {leaderboardRepos.length > 5 && (
-                      <div style={styles.pagination}>
+                    {hasMoreLeaderboard && (
+                      <div style={{...styles.pagination, justifyContent: 'flex-end'}}>
                         <button 
-                          onClick={() => setLeaderboardPage(p => Math.max(0, p - 1))}
-                          disabled={leaderboardPage === 0}
-                          style={{ ...styles.pageBtn, ...(leaderboardPage === 0 ? styles.pageBtnDisabled : {}) }}
+                          onClick={() => fetchLeaderboard(true)}
+                          disabled={isLeaderboardLoading}
+                          style={styles.pageBtn}
                         >
-                          ← Previous
-                        </button>
-                        <span style={styles.pageText}>Page {leaderboardPage + 1} of {Math.ceil(leaderboardRepos.length / 5)}</span>
-                        <button 
-                          onClick={() => setLeaderboardPage(p => Math.min(Math.ceil(leaderboardRepos.length / 5) - 1, p + 1))}
-                          disabled={leaderboardPage >= Math.ceil(leaderboardRepos.length / 5) - 1}
-                          style={{ ...styles.pageBtn, ...(leaderboardPage >= Math.ceil(leaderboardRepos.length / 5) - 1 ? styles.pageBtnDisabled : {}) }}
-                        >
-                          Next →
+                          Scan Next Batch →
                         </button>
                       </div>
                     )}
                   </div>
                 )}
-                {leaderboardInput && leaderboardRepos.length === 0 && (
+                {!isLeaderboardLoading && leaderboardInput && leaderboardResults.length === 0 && (
                   <div style={{marginTop: '16px', color: '#94a3b8', fontSize: '14px'}}>
-                    No projects found for this tech stack.
+                    No projects scanned yet, or no projects found.
                   </div>
                 )}
               </div>
