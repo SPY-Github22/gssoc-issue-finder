@@ -1,0 +1,17 @@
+{
+  "name": "gssoc-issue-finder",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "next": "^13.4.8",
+    "node-fetch": "^2.6.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
