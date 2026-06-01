@@ -11,6 +11,26 @@ const REPO_PLACEHOLDERS = [
   "e.g., 'CodeCraft'"
 ]
 
+const SYNONYMS = {
+  'ml': ['machine learning'],
+  'machine learning': ['ml'],
+  'ai': ['artificial intelligence'],
+  'artificial intelligence': ['ai'],
+  'js': ['javascript'],
+  'javascript': ['js'],
+  'reactjs': ['react'],
+  'react.js': ['react'],
+  'node': ['nodejs', 'node.js'],
+  'nodejs': ['node', 'node.js'],
+  'node.js': ['node', 'nodejs'],
+  'ts': ['typescript'],
+  'typescript': ['ts'],
+  'frontend': ['front-end'],
+  'front-end': ['frontend'],
+  'backend': ['back-end'],
+  'back-end': ['backend']
+}
+
 export default function Home() {
   const [repos, setRepos] = useState([])
   const [mode, setMode] = useState('search')
@@ -63,12 +83,19 @@ export default function Home() {
     const topic = leaderboardInput.toLowerCase()
     if (!topic) return
     
+    let searchTerms = [topic]
+    if (SYNONYMS[topic]) {
+      searchTerms = searchTerms.concat(SYNONYMS[topic])
+    }
+
     // Find all matching repos locally
     const matching = repos.filter(r => {
-      return r.tech_stack.some(t => t.toLowerCase().includes(topic)) ||
-             r.topics.some(t => t.toLowerCase().includes(topic)) ||
-             r.project_name.toLowerCase().includes(topic) ||
-             r.description.toLowerCase().includes(topic)
+      return searchTerms.some(term => 
+        r.tech_stack.some(t => t.toLowerCase().includes(term)) ||
+        r.topics.some(t => t.toLowerCase().includes(term)) ||
+        r.project_name.toLowerCase().includes(term) ||
+        r.description.toLowerCase().includes(term)
+      )
     }).sort((a, b) => {
       return (b.unassigned_count || 0) - (a.unassigned_count || 0)
     })

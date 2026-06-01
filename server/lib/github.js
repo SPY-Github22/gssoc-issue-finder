@@ -181,6 +181,26 @@ async function pickRandomIssueForRepos({ ownerOnly = true, difficulty = null } =
   return scanProjectsForIssues(projects, ownerOnly, 5)
 }
 
+const SYNONYMS = {
+  'ml': ['machine learning'],
+  'machine learning': ['ml'],
+  'ai': ['artificial intelligence'],
+  'artificial intelligence': ['ai'],
+  'js': ['javascript'],
+  'javascript': ['js'],
+  'reactjs': ['react'],
+  'react.js': ['react'],
+  'node': ['nodejs', 'node.js'],
+  'nodejs': ['node', 'node.js'],
+  'node.js': ['node', 'nodejs'],
+  'ts': ['typescript'],
+  'typescript': ['ts'],
+  'frontend': ['front-end'],
+  'front-end': ['frontend'],
+  'backend': ['back-end'],
+  'back-end': ['backend']
+}
+
 async function findIssuesBySearch(query, topic, { ownerOnly = true, targetCount = 10 } = {}) {
   let projects = await getProjectsList()
   
@@ -188,16 +208,28 @@ async function findIssuesBySearch(query, topic, { ownerOnly = true, targetCount 
     const q = (query || '').toLowerCase()
     const t = (topic || '').toLowerCase()
     
-    const matchesSearch = !q ||
-      r.project_name.toLowerCase().includes(q) ||
-      r.owner_repo.toLowerCase().includes(q) ||
-      r.description.toLowerCase().includes(q)
+    let searchTerms = [t]
+    if (t && SYNONYMS[t]) {
+      searchTerms = searchTerms.concat(SYNONYMS[t])
+    }
 
-    const matchesTopic = !t ||
-      r.tech_stack.some(x => x.toLowerCase().includes(t)) ||
-      r.topics.some(x => x.toLowerCase().includes(t)) ||
-      r.project_name.toLowerCase().includes(t) ||
-      r.description.toLowerCase().includes(t)
+    let queryTerms = [q]
+    if (q && SYNONYMS[q]) {
+      queryTerms = queryTerms.concat(SYNONYMS[q])
+    }
+
+    const matchesSearch = !q || queryTerms.some(term =>
+      r.project_name.toLowerCase().includes(term) ||
+      r.owner_repo.toLowerCase().includes(term) ||
+      r.description.toLowerCase().includes(term)
+    )
+
+    const matchesTopic = !t || searchTerms.some(term => 
+      r.tech_stack.some(x => x.toLowerCase().includes(term)) ||
+      r.topics.some(x => x.toLowerCase().includes(term)) ||
+      r.project_name.toLowerCase().includes(term) ||
+      r.description.toLowerCase().includes(term)
+    )
 
     return matchesSearch && matchesTopic
   })
