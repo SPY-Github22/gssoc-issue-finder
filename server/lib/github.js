@@ -81,16 +81,8 @@ function shuffle(array) {
   }
 }
 
-async function pickRandomIssueForRepos({ ownerOnly = true, difficulty = null } = {}) {
-  let projects = await getProjectsList()
-  
-  if (difficulty && difficulty !== 'All') {
-    projects = projects.filter(p => p.difficulty === difficulty)
-  }
-  
-  shuffle(projects)
+async function scanProjectsForIssues(projects, ownerOnly, targetCount = 5) {
   const results = []
-  const targetCount = 5
   const PROJECT_BATCH_SIZE = 5
   const ISSUE_BATCH_SIZE = 10
 
@@ -160,6 +152,44 @@ async function pickRandomIssueForRepos({ ownerOnly = true, difficulty = null } =
   }
 
   return results.length > 0 ? results : null
+}
+
+async function pickRandomIssueForRepos({ ownerOnly = true, difficulty = null } = {}) {
+  let projects = await getProjectsList()
+  
+  if (difficulty && difficulty !== 'All') {
+    projects = projects.filter(p => p.difficulty === difficulty)
+  }
+  
+  shuffle(projects)
+  return scanProjectsForIssues(projects, ownerOnly, 5)
+}
+
+async function findIssuesBySearch(query, topic, { ownerOnly = true, targetCount = 10 } = {}) {
+  let projects = await getProjectsList()
+  
+  projects = projects.filter(r => {
+    const q = (query || '').toLowerCase()
+    const t = (topic || '').toLowerCase()
+    
+    const matchesSearch = !q ||
+      r.project_name.toLowerCase().includes(q) ||
+      r.owner_repo.toLowerCase().includes(q) ||
+      r.description.toLowerCase().includes(q)
+
+    const matchesTopic = !t ||
+      r.tech_stack.some(x => x.toLowerCase().includes(t)) ||
+      r.topics.some(x => x.toLowerCase().includes(t)) ||
+      r.project_name.toLowerCase().includes(t) ||
+      r.description.toLowerCase().includes(t)
+
+    return matchesSearch && matchesTopic
+  })
+
+  // Sort by unassigned_count descending so we search the ones with most issues first
+  projects.sort((a, b) => (b.unassigned_count || 0) - (a.unassigned_count || 0))
+
+  return scanProjectsForIssues(projects, ownerOnly, targetCount)
 }
 
 async function findIssuesInRepo(owner, repo, { ownerOnly = true } = {}) {
@@ -251,4 +281,4 @@ async function getStrictCountsForRepos(reposList, { ownerOnly = true } = {}) {
   return results.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean)
 }
 
-module.exports = { pickRandomIssueForRepos, findIssuesInRepo, getStrictCountsForRepos }
+module.exports = { pickRandomIssueForRepos, findIssuesInRepo, getStrictCountsForRepos, findIssuesBySearch }

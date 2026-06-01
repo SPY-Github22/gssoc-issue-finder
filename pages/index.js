@@ -8,7 +8,6 @@ export default function Home() {
   const [mode, setMode] = useState('search')
   const [ownerOnly, setOwnerOnly] = useState(true)
   const [difficulty, setDifficulty] = useState('All Levels')
-  const [selectedRepo, setSelectedRepo] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [topicInput, setTopicInput] = useState('')
   const [results, setResults] = useState([])
@@ -134,35 +133,40 @@ export default function Home() {
   }
 
   async function searchRepo() {
-    let repoToSearch = selectedRepo
-    if (!repoToSearch && filteredRepos.length > 0) {
-      repoToSearch = filteredRepos[0].owner_repo
-      setSelectedRepo(repoToSearch)
-    }
-
-    if (!repoToSearch) {
-      setError('Please select a repository or enter a matching query/topic')
+    if (!searchInput && !topicInput) {
+      setError('Please enter a repository name or tech stack to search')
       return
     }
 
     setLoading(true)
     setError(null)
     setResults([])
-    const res = await fetch(`/api/issues/search?repo=${repoToSearch}&ownerOnly=${ownerOnly}`)
-    const data = await res.json()
-    setLoading(false)
-    if (data.error) {
-      setError(data.error)
-    } else {
-      if (data.count === 0) {
-        setError('No matching issues found in this repository')
+    
+    const queryParams = new URLSearchParams({
+      ownerOnly,
+      ...(searchInput && { search: searchInput }),
+      ...(topicInput && { topic: topicInput })
+    })
+
+    try {
+      const res = await fetch(`/api/issues/search-all?${queryParams}`)
+      const data = await res.json()
+      
+      setLoading(false)
+      if (data.error) {
+        setError(data.error)
       } else {
-        setResults(data.issues)
+        if (data.count === 0 || !data.issues || data.issues.length === 0) {
+          setError('No matching issues found')
+        } else {
+          setResults(data.issues)
+        }
       }
+    } catch (e) {
+      setLoading(false)
+      setError('Failed to fetch issues')
     }
   }
-
-  const repoDisplay = repos.find(r => r.owner_repo === selectedRepo)
 
   return (
     <div style={styles.container}>
@@ -232,6 +236,17 @@ export default function Home() {
               >
                 {loading ? 'Finding issue...' : 'Find Random Issue'}
               </button>
+              {loading && mode === 'random' && (
+                <div style={styles.searchInfo}>
+                  <div style={styles.timerClock}>{formatTime(timeElapsed)}</div>
+                  <div>Searching... please wait, there are a lot of repositories to go through. This might take a while.</div>
+                </div>
+              )}
+              {error && mode === 'random' && (
+                <div style={styles.errorBox}>
+                  {error}
+                </div>
+              )}
             </div>
           ) : (
             <div style={styles.searchSection}>
@@ -243,6 +258,7 @@ export default function Home() {
                   value={searchInput}
                   onChange={e => setSearchInput(e.target.value)}
                   style={styles.searchInput}
+                  onKeyDown={e => e.key === 'Enter' && searchRepo()}
                 />
                 <input
                   type="text"
@@ -250,46 +266,28 @@ export default function Home() {
                   value={topicInput}
                   onChange={e => setTopicInput(e.target.value)}
                   style={styles.searchInput}
+                  onKeyDown={e => e.key === 'Enter' && searchRepo()}
                 />
-                {(searchInput || topicInput) && (
-                  <div style={styles.dropdown}>
-                    {filteredRepos.slice(0, 10).map(r => (
-                      <div
-                        key={r.owner_repo}
-                        onClick={() => {
-                          setSelectedRepo(r.owner_repo)
-                          setSearchInput('')
-                        }}
-                        style={styles.dropdownItem}
-                      >
-                        <div style={styles.dropdownTitle}>{r.project_name}</div>
-                        <div style={styles.dropdownMeta}>{r.owner_repo} • {r.difficulty}</div>
-                        {r.tech_stack.length > 0 && (
-                          <div style={styles.dropdownMeta}>{r.tech_stack.slice(0, 4).join(', ')}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-              {selectedRepo && (
-                <div style={styles.selectedRepo}>
-                  <span style={styles.selectedRepoText}>{repoDisplay?.project_name}</span>
-                  <button
-                    onClick={() => setSelectedRepo('')}
-                    style={styles.clearBtn}
-                  >
-                    Clear
-                  </button>
-                </div>
-              )}
               <button
                 onClick={searchRepo}
-                disabled={(!selectedRepo && filteredRepos.length === 0) || loading}
+                disabled={(!searchInput && !topicInput) || loading}
                 style={{...styles.primaryBtn, ...styles.searchBtn}}
               >
                 {loading ? 'Searching...' : 'Search Issues'}
               </button>
+              
+              {loading && mode === 'search' && (
+                <div style={styles.searchInfo}>
+                  <div style={styles.timerClock}>{formatTime(timeElapsed)}</div>
+                  <div>Searching... please wait, there are a lot of repositories to go through. This might take a while.</div>
+                </div>
+              )}
+              {error && mode === 'search' && (
+                <div style={styles.errorBox}>
+                  {error}
+                </div>
+              )}
               <div style={{...styles.repoResults, borderTop: '1px solid #1f2937', paddingTop: '24px', marginTop: '32px'}}>
                 <h2 style={{...styles.resultsTitle, color: '#38bdf8'}}>Top Verified Projects (Leaderboard)</h2>
                 <p style={{color: '#94a3b8', fontSize: '14px', marginBottom: '16px'}}>
@@ -368,23 +366,10 @@ export default function Home() {
           )}
         </div>
 
-        {loading && (
-          <div style={styles.searchInfo}>
-            <div style={styles.timerClock}>{formatTime(timeElapsed)}</div>
-            <div>Searching... please wait, there are a lot of repositories to go through. This might take a while.</div>
-          </div>
-        )}
-
-        {error && (
-          <div style={styles.errorBox}>
-            {error}
-          </div>
-        )}
-
         {results.length > 0 && (
           <div style={styles.resultsSection}>
             <h2 style={styles.resultsTitle}>
-              {mode === 'random' ? `${results.length} Random Issues` : `${results.length} Issues in ${selectedRepo}`}
+              {mode === 'random' ? `${results.length} Random Issues` : `${results.length} Matching Issues`}
             </h2>
             <div style={styles.issuesList}>
               {results.map((issue, idx) => (
