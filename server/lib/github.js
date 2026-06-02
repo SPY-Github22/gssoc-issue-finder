@@ -53,15 +53,33 @@ const ANNOUNCEMENT_KEYWORDS = [
   'reminder:',
   'attention:',
   'important:',
-  'please read'
+  'please read',
+  'read before contributing',
+  'guidelines update',
+  'contribution pause'
 ]
 
-function isAnnouncementIssue(title) {
-  if (!title) return false
-  const lower = title.toLowerCase()
-  return ANNOUNCEMENT_KEYWORDS.some(kw => lower.includes(kw)) ||
-         lower.startsWith('reminder ') ||
-         lower.startsWith('notice ')
+function isAnnouncementIssue(issue) {
+  if (!issue) return false
+  
+  const titleLower = (issue.title || '').toLowerCase()
+  const isTitleMatch = ANNOUNCEMENT_KEYWORDS.some(kw => titleLower.includes(kw)) ||
+         titleLower.startsWith('reminder ') ||
+         titleLower.startsWith('notice ')
+         
+  if (isTitleMatch) return true
+  
+  if (Array.isArray(issue.labels)) {
+    const hasAnnouncementLabel = issue.labels.some(label => {
+      const labelName = (typeof label === 'string' ? label : (label.name || '')).toLowerCase()
+      return labelName.includes('announcement') || 
+             labelName.includes('notice') || 
+             (labelName.includes('guideline') && !labelName.includes('missing'))
+    })
+    if (hasAnnouncementLabel) return true
+  }
+  
+  return false
 }
 
 async function fetchOpenIssues(owner, repo) {
@@ -73,7 +91,7 @@ async function fetchOpenIssues(owner, repo) {
 
   return items
     .filter(issue => !issue.pull_request)
-    .filter(issue => !isAnnouncementIssue(issue.title))
+    .filter(issue => !isAnnouncementIssue(issue))
     .map(issue => ({
       number: issue.number,
       title: issue.title,
