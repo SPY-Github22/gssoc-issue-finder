@@ -128,8 +128,11 @@ function shuffle(array) {
   }
 }
 
-async function scanProjectsForIssues(projects, ownerOnly, targetCount = 5) {
+async function scanProjectsForIssues(projects, ownerOnly, targetCount = 10) {
   const results = []
+  const backlog = []
+  const repoCounts = {}
+  
   const PROJECT_BATCH_SIZE = 10
   const ISSUE_BATCH_SIZE = 30
   const START_TIME = Date.now()
@@ -164,7 +167,6 @@ async function scanProjectsForIssues(projects, ownerOnly, targetCount = 5) {
 
     // Validate issues in parallel batches
     for (let j = 0; j < potentialIssues.length; j += ISSUE_BATCH_SIZE) {
-      if (results.length >= targetCount) break
       if (Date.now() - START_TIME > MAX_TIME) break
       
       const issueBatch = potentialIssues.slice(j, j + ISSUE_BATCH_SIZE)
@@ -195,15 +197,31 @@ async function scanProjectsForIssues(projects, ownerOnly, targetCount = 5) {
 
       for (const vResult of validatedResults) {
         if (vResult.status === 'fulfilled' && vResult.value) {
-          if (results.length < targetCount) {
-            results.push(vResult.value)
+          const issue = vResult.value
+          const repoName = issue.repo
+          
+          repoCounts[repoName] = (repoCounts[repoName] || 0) + 1
+          
+          if (repoCounts[repoName] <= 2 && results.length < targetCount) {
+            results.push(issue)
+          } else {
+            backlog.push(issue)
           }
         }
       }
     }
   }
 
-  return results.length > 0 ? results : null
+  // Fill from backlog if we don't have enough diverse results
+  const needed = targetCount - results.length
+  if (needed > 0 && backlog.length > 0) {
+    results.push(...backlog.slice(0, needed))
+  }
+
+  if (results.length === 0) return []
+
+  shuffle(results)
+  return results
 }
 
 async function pickRandomIssueForRepos({ ownerOnly = true, difficulty = null } = {}) {
