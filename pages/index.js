@@ -336,7 +336,9 @@ export default function Home() {
               >
                 {loading ? 'Searching...' : 'Search Issues'}
               </button>
-              
+              <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '13px', color: '#94a3b8' }}>
+                <em>Note: Repos that are most relevant will be displayed.</em>
+              </div>
               {loading && mode === 'search' && (
                 <div style={styles.searchInfo}>
                   <div style={styles.timerClock}>{formatTime(timeElapsed)}</div>
