@@ -290,7 +290,27 @@ export default function Home() {
             </div>
           ) : (
             <div style={styles.searchSection}>
-              <p style={styles.label}>Select a Repository:</p>
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.2)',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                color: '#93c5fd',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
+              }}>
+                <span style={{ fontSize: '20px' }}>💡</span>
+                <div>
+                  <strong style={{ display: 'block', marginBottom: '4px', color: '#bfdbfe' }}>Quick Start Guide</strong>
+                  1. Enter a language or tech stack (e.g., 'TypeScript') in the second box below.<br/>
+                  2. Click the green <strong>Search Issues</strong> button to find your first issue!
+                </div>
+              </div>
+              
+              <p style={styles.label}>SELECT A REPOSITORY:</p>
               <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <input
                   type="text"
